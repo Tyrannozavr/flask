@@ -26,16 +26,21 @@ class User(db.Model):
         pass
 
     def update_user(self, username=None, balance=None):
-        if self.query.filter_by(username=username).first() and self.username != username:
+        if username and self.query.filter_by(username=username).first() and self.username != username:
             raise ValueError('username already taken')
         else:
-            self.username = username
-            self.balance = balance
+            if username:
+                self.username = username
+            if balance:
+                self.balance = int(balance)
             db.session.commit()
             return self
+    def delete_user(self):
+        db.session.delete(self)
+        db.session.commit()
 
     @orm.validates('balance')
-    def validate_age(self, key, value):
+    def validate_balance(self, key, value):
         if value < 0:
             raise ValueError('balance cannot be negative')
         return value
@@ -50,20 +55,11 @@ from flask import request
 
 @app.route('/update/<id>')
 def update(id):
+    params = request.args
+    balance = params.get('balance')
     user = User.query.get(id)
-    username = request.args.get('username', user.username)
-    balance = int(request.args.get('balance', user.balance))
-    if user is None:
-        return 'User not found'
-    try:
-        user = user.update_user(username, balance)
-        return jsonify({'username': user.username, 'balance': user.balance})
-    except ValueError as err:
-        if err.args[0] == 'username already taken':
-            return 'username already taken'
-        elif err.args[0] == 'balance cannot be negative':
-            return 'balance cannot be negative'
-
+    user.update_user(balance=balance)
+    return jsonify({'balance': user.balance})
 
 with app.app_context():
     db.create_all()
