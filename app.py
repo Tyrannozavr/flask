@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.util.preloaded import orm
 
 app = Flask(__name__)
 
@@ -33,36 +34,35 @@ class User(db.Model):
             db.session.commit()
             return self
 
+    @orm.validates('balance')
+    def validate_age(self, key, value):
+        if value < 0:
+            raise ValueError('balance cannot be negative')
+        return value
+
     def __repr__(self):
         return f'<User {self.username}>'
 
 
 # добавления, обновления и удаления пользователей и обновления их балансов
 from flask import request
-from sqlite3 import IntegrityError
 
 
 @app.route('/update/<id>')
 def update(id):
-    username = request.args.get('username')
-    balance = request.args.get('balance')
-    # user = User.query.filter_by(id=id).first()
-    # if User.query.filter_by(username=username).first() is not None and user.username != username:
-    #     return 'username already taken'
-    # if user is None:
-    #     return 'This name is already taken'
-    # else:
-    #     user.username = username
-    #     user.balance = balance
-    #     db.session.commit()
     user = User.query.get(id)
+    username = request.args.get('username', user.username)
+    balance = int(request.args.get('balance', user.balance))
     if user is None:
         return 'User not found'
     try:
-        answer = user.update_user(username, balance)
-    except ValueError:
-        return 'username already taken'
-    return jsonify({'answer': answer})
+        user = user.update_user(username, balance)
+        return jsonify({'username': user.username, 'balance': user.balance})
+    except ValueError as err:
+        if err.args[0] == 'username already taken':
+            return 'username already taken'
+        elif err.args[0] == 'balance cannot be negative':
+            return 'balance cannot be negative'
 
 
 with app.app_context():
