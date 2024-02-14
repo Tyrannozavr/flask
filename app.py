@@ -25,10 +25,13 @@ class User(db.Model):
         pass
 
     def update_user(self, username=None, balance=None):
-        self.username = username
-        self.balance = balance
-        db.session.commit()
-        return self
+        if self.query.filter_by(username=username).first() and self.username != username:
+            raise ValueError('username already taken')
+        else:
+            self.username = username
+            self.balance = balance
+            db.session.commit()
+            return self
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -36,17 +39,30 @@ class User(db.Model):
 
 # добавления, обновления и удаления пользователей и обновления их балансов
 from flask import request
+from sqlite3 import IntegrityError
+
 
 @app.route('/update/<id>')
 def update(id):
     username = request.args.get('username')
     balance = request.args.get('balance')
-    user = User.query.filter_by(id=id).first()
-    if user is not None:
-        user.username = username
-        user.balance = balance
-        db.session.commit()
-    return jsonify({'name': user.username, 'user': user.balance})
+    # user = User.query.filter_by(id=id).first()
+    # if User.query.filter_by(username=username).first() is not None and user.username != username:
+    #     return 'username already taken'
+    # if user is None:
+    #     return 'This name is already taken'
+    # else:
+    #     user.username = username
+    #     user.balance = balance
+    #     db.session.commit()
+    user = User.query.get(id)
+    if user is None:
+        return 'User not found'
+    try:
+        answer = user.update_user(username, balance)
+    except ValueError:
+        return 'username already taken'
+    return jsonify({'answer': answer})
 
 
 with app.app_context():
