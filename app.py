@@ -32,17 +32,13 @@ class User(db.Model):
         db.session.commit()
         return user
 
-
     def update_user(self, username=None, balance=None):
-        if username and self.query.filter_by(username=username).first() and self.username != username:
-            raise ValueError('username already taken')
-        else:
-            if username:
-                self.username = username
-            if balance:
-                self.balance = int(balance)
-            db.session.commit()
-            return self
+        if username:
+            self.username = username
+        if balance:
+            self.balance = int(balance)
+        db.session.commit()
+        return self
 
     @classmethod
     def delete_user(cls, user_id):
