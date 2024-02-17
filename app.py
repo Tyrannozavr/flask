@@ -1,6 +1,11 @@
+import datetime
+
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.future import engine
 from sqlalchemy.util.preloaded import orm
+from flask import request
+from sqlalchemy import select
 
 app = Flask(__name__)
 
@@ -10,6 +15,33 @@ if __name__ == 'main':
 # подключение базы данных
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
+# an Engine, which the Session will use for connection
+# resources
+engine = create_engine("sqlite:///users.db")
+
+# create session and add objects
+
+class Weather(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    city = db.Column(db.String(100))
+    temperature = db.Column(db.Integer, unique=False, nullable=False)
+    datetime = db.Column(db.DateTime, unique=False, nullable=False)
+
+    def __init__(self, city, temperature, datetime):
+        self.city = str(city)
+        self.temperature = temperature
+        self.datetime = datetime
+        super().__init__()
+
+    @classmethod
+    def get_weather(cls, city):
+        with Session(engine) as session:
+            weather = Weather.query.filter_by(city=city).first()
+        return weather
 
 
 class User(db.Model):
@@ -32,7 +64,7 @@ class User(db.Model):
         db.session.commit()
         return user
 
-    def update_user(self, username=None, balance=None):
+    def update_user(self, username: str = None, balance: int = None):
         if username:
             self.username = username
         if balance:
@@ -41,7 +73,7 @@ class User(db.Model):
         return self
 
     @classmethod
-    def delete_user(cls, user_id):
+    def delete_user(cls, user_id: int):
         user = cls.query.get(int(user_id))
         if user:
             db.session.delete(user)
@@ -60,15 +92,21 @@ class User(db.Model):
 
 
 # добавления, обновления и удаления пользователей и обновления их балансов
-from flask import request
 
-
+from utils import fetch_weather
 @app.route('/update')
 def update():
-    username = request.args.get('username')
-    balance = request.args.get('balance')
-    user = User.add_user(username, balance)
-    return jsonify({'user': {'username': user.username, 'balance': user.balance}})
+    # weather = Weather.get_weather('Minsk')
+    weather = fetch_weather('Minsk')
+    date = weather.datetime
+    different = datetime.datetime.now() - date
+    if different.total_seconds() > 300:
+        print('old data')
+        # new_weather =
+    # print(different > datetime.time(minute=5))
+
+    return jsonify(a='aaa')
+
 
 with app.app_context():
     db.create_all()
