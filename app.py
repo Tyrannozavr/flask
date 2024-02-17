@@ -22,8 +22,16 @@ class User(db.Model):
         self.balance = balance
         super().__init__()
 
-    def add_user(self, username):
-        pass
+    @classmethod
+    def add_user(cls, username, balance=None):
+        if balance is None:
+            balance = 6000
+        balance = int(balance)
+        user = cls(username, balance)
+        db.session.add(user)
+        db.session.commit()
+        return user
+
 
     def update_user(self, username=None, balance=None):
         if username and self.query.filter_by(username=username).first() and self.username != username:
@@ -35,9 +43,15 @@ class User(db.Model):
                 self.balance = int(balance)
             db.session.commit()
             return self
-    def delete_user(self):
-        db.session.delete(self)
-        db.session.commit()
+
+    @classmethod
+    def delete_user(cls, user_id):
+        user = cls.query.get(int(user_id))
+        if user:
+            db.session.delete(user)
+            db.session.commit()
+        else:
+            raise 'User not found'
 
     @orm.validates('balance')
     def validate_balance(self, key, value):
@@ -53,13 +67,12 @@ class User(db.Model):
 from flask import request
 
 
-@app.route('/update/<id>')
-def update(id):
-    params = request.args
-    balance = params.get('balance')
-    user = User.query.get(id)
-    user.update_user(balance=balance)
-    return jsonify({'balance': user.balance})
+@app.route('/update')
+def update():
+    username = request.args.get('username')
+    balance = request.args.get('balance')
+    user = User.add_user(username, balance)
+    return jsonify({'user': {'username': user.username, 'balance': user.balance}})
 
 with app.app_context():
     db.create_all()
@@ -67,7 +80,7 @@ with app.app_context():
     balances = [5000, 6000, 7000, 8000, 10000]
     query = User.query.all()
     if len(query) == 0:
-        for name, price in zip(names, balances):
-            user = User(name, price)
+        for name, balance in zip(names, balances):
+            user = User(name, balance)
             db.session.add(user)
         db.session.commit()
