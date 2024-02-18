@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 
 from flask import Flask, jsonify
@@ -97,11 +98,12 @@ from utils import fetch_weather
 @app.route('/update')
 def update():
     # weather = Weather.get_weather('Minsk')
-    weather = fetch_weather('Minsk')
+    coroutine = fetch_weather('Minsk')
+    weather = asyncio.run(coroutine)
     date = weather.datetime
     different = datetime.datetime.now() - date
-    if different.total_seconds() > 300:
-        print('old data')
+    # if different.total_seconds() > 300:
+    #     print('old data')
         # new_weather =
     # print(different > datetime.time(minute=5))
 
