@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 # resources
 engine = create_engine("sqlite:///users.db")
 
+
 # create session and add objects
 
 class Weather(db.Model):
@@ -97,6 +98,8 @@ class User(db.Model):
 from utils import fetch_weather
 
 users = {}
+
+
 @app.route('/update')
 def update():
     userId = request.args.get('userId')
@@ -112,13 +115,29 @@ def update():
     else:
         users[userId] = {'balance': user.balance, 'time': datetime.datetime.now(), 'count': 1}
 
-    # user.balance += temperature
-    # db.session.commit()
-    print(users)
+    user.balance = users[userId]['balance']
+
+    asyncio.run(commit(userId))
     return jsonify(balance=users[userId]['balance'])
 
-    # return jsonify(balance=user.balance)
 
+import threading
+
+
+def update_user(userId):
+    with app.app_context():
+        user = User.query.get(int(userId))
+        user.balance = users[userId]['balance']
+        db.session.commit()
+
+
+async def commit(userId):
+    t = threading.Timer(1, update_user, args=(userId))
+    t.start()
+
+
+# t = threading.Timer(2, test)
+# t.start()
 
 with app.app_context():
     db.create_all()
