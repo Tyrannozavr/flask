@@ -1,3 +1,5 @@
+import requests
+
 from app import Weather, db
 import datetime
 import asyncio
@@ -7,8 +9,10 @@ my_key = 'e2b0ae915b3b416696f101323241702'
 
 
 def request_temperature(city: str) -> float:
-    request = requests.get(url=f'http://api.weatherapi.com/v1/current.json?key={my_key}&q={city}')
-    temperature = request.json().get('current').get('temp_c')
+    response = requests.get(url=f'http://api.weatherapi.com/v1/current.json?key={my_key}&q={city}')
+    if response.status_code == 400:
+        raise Exception('city is not found')
+    temperature = response.json().get('current').get('temp_c')
     return float(temperature)
 
 # обновляет данные в бд по температуре в городе, по задумке без задержки запроса

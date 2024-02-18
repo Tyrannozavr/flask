@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 import threading
 
 
@@ -102,21 +103,25 @@ users = {}
 
 # путь для запроса, принимает userId и city в качестве параметров
 @app.route('/update')
-def update():
+def update_user_balance():
     userId = request.args.get('userId')
     city = request.args.get('city')
-    coroutine = fetch_weather(city)
-    temperature = asyncio.run(coroutine)
+    try:
+        coroutine = fetch_weather(city)
+        temperature = asyncio.run(coroutine)
+    except Exception as e:
+        return json.dumps({'error': str(e)})
     user = User.query.get(int(userId))
+    if user is None:
+        return jsonify({'error': 'User not found'})
     local_user = users.get(userId)
     if local_user:
         users[userId]['balance'] += temperature
         users[userId]['count'] += 1
     else:
         users[userId] = {'balance': user.balance, 'time': datetime.datetime.now(), 'count': 1}
-    user.balance = users[userId]['balance']
     asyncio.run(commit(userId))
-    return jsonify(balance=users[userId]['balance'])
+    return jsonify(status=200)
 
 
 # следующие две функции нужны для того, чтобы коммит применялся через секунду и применил данные при 1000 запросов в секунду
@@ -124,8 +129,9 @@ def update():
 def update_user(userId):
     with app.app_context():
         user = User.query.get(int(userId))
-        if users[userId]['balance'] >= 0:
-            user.balance = users[userId]['balance']
+        balance = users[userId]['balance']
+        if balance >= 0:
+            user.balance = balance
         else:
             users[userId]['balance'] = 0
             user.balance = 0
