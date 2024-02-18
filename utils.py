@@ -17,44 +17,33 @@ def request_temperature(city: str) -> float:
 
 
 async def refresh_data(city: str):
+    print('refresh_data')
     temperature = request_temperature(city)
     weather = Weather.get_weather(city)
-    # print('weather in refresh is ', weather)
     if weather is None:
         weather = Weather(city, temperature, datetime.datetime.now())
-        print(weather, 'now')
         db.session.add(weather)
     else:
         weather.temperature = temperature
         weather.datetime = datetime.datetime.now()
     db.session.commit()
 
+
 async def fetch_weather(city: str) -> float:
     weather = Weather.get_weather(city)
-    if weather is None:
-        print('is none')
+    if weather is None:  # если данных в кэше нет - записываем и после возвращаем
         await asyncio.create_task(refresh_data(city))
-        print('await')
         weather = Weather.get_weather(city)
-        print(weather)
-    print('after if')
-    weather_datetime = weather.datetime
-    print('after weather datetime')
-    different = datetime.datetime.now() - weather_datetime
-    if different.total_seconds() > 6000:
-        await refresh_data(city)
-        weather = Weather.get_weather(city)
-        print('fetch data')
-    elif different.total_seconds() > 3000:
-        asyncio.create_task(refresh_data(city))
-        print('refresh data')
-    print('end')
+    else:
+        weather_datetime = weather.datetime
+        different = datetime.datetime.now() - weather_datetime
+        if different.total_seconds() > 540:  # если прошло более 9 минут ждем обновления данных и после этого возвращаем
+            await refresh_data(city)
+            weather = Weather.get_weather(city)
+        elif different.total_seconds() > 300:  # при регулярных запросах раз в 5 минут обновляются данные
+            asyncio.create_task(refresh_data(city))
     return weather
 
 
 with app.app_context():
     fetch_weather('Minsk')
-
-
-
-

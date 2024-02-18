@@ -97,16 +97,11 @@ class User(db.Model):
 from utils import fetch_weather
 @app.route('/update')
 def update():
-    # weather = Weather.get_weather('Minsk')
-    coroutine = fetch_weather('Minsk')
+    userId = request.args.get('userId')
+    city = request.args.get('city')
+    print(userId, city)
+    coroutine = fetch_weather(city)
     weather = asyncio.run(coroutine)
-    date = weather.datetime
-    different = datetime.datetime.now() - date
-    # if different.total_seconds() > 300:
-    #     print('old data')
-        # new_weather =
-    # print(different > datetime.time(minute=5))
-
     return jsonify(a='aaa')
 
 
