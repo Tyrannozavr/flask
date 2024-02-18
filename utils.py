@@ -1,8 +1,4 @@
-import requests
-from flask import session
-
 from app import Weather, db
-from app import app
 import datetime
 import asyncio
 
@@ -15,6 +11,7 @@ def request_temperature(city: str) -> float:
     temperature = request.json().get('current').get('temp_c')
     return float(temperature)
 
+# обновляет данные в бд по температуре в городе, по задумке без задержки запроса
 async def refresh_data(city: str):
     temperature = request_temperature(city)
     weather = Weather.get_weather(city)

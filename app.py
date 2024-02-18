@@ -1,12 +1,15 @@
 import asyncio
 import datetime
+import threading
+
 
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.future import engine
 from sqlalchemy.util.preloaded import orm
 from flask import request
-from sqlalchemy import select
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 app = Flask(__name__)
 
@@ -17,15 +20,11 @@ if __name__ == 'main':
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
-# an Engine, which the Session will use for connection
-# resources
+
+
 engine = create_engine("sqlite:///users.db")
 
-
-# create session and add objects
 
 class Weather(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -46,6 +45,8 @@ class Weather(db.Model):
         return weather
 
 
+
+# определение моделей
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -99,14 +100,13 @@ from utils import fetch_weather
 
 users = {}
 
-
+# путь для запроса, принимает userId и city в качестве параметров
 @app.route('/update')
 def update():
     userId = request.args.get('userId')
     city = request.args.get('city')
-    # coroutine = fetch_weather(city)
-    # temperature = asyncio.run(coroutine)
-    temperature = -2
+    coroutine = fetch_weather(city)
+    temperature = asyncio.run(coroutine)
     user = User.query.get(int(userId))
     local_user = users.get(userId)
     if local_user:
@@ -114,20 +114,21 @@ def update():
         users[userId]['count'] += 1
     else:
         users[userId] = {'balance': user.balance, 'time': datetime.datetime.now(), 'count': 1}
-
     user.balance = users[userId]['balance']
-
     asyncio.run(commit(userId))
     return jsonify(balance=users[userId]['balance'])
 
 
-import threading
-
-
+# следующие две функции нужны для того, чтобы коммит применялся через секунду и применил данные при 1000 запросов в секунду
+# без ошибок
 def update_user(userId):
     with app.app_context():
         user = User.query.get(int(userId))
-        user.balance = users[userId]['balance']
+        if users[userId]['balance'] >= 0:
+            user.balance = users[userId]['balance']
+        else:
+            users[userId]['balance'] = 0
+            user.balance = 0
         db.session.commit()
 
 
@@ -136,9 +137,7 @@ async def commit(userId):
     t.start()
 
 
-# t = threading.Timer(2, test)
-# t.start()
-
+#Здесь создаем базу и наполняем
 with app.app_context():
     db.create_all()
     names = ['John', 'Smith', 'Mike', 'David', 'Jack']
