@@ -15,9 +15,7 @@ def request_temperature(city: str) -> float:
     temperature = request.json().get('current').get('temp_c')
     return float(temperature)
 
-
 async def refresh_data(city: str):
-    print('refresh_data')
     temperature = request_temperature(city)
     weather = Weather.get_weather(city)
     if weather is None:
@@ -42,8 +40,4 @@ async def fetch_weather(city: str) -> float:
             weather = Weather.get_weather(city)
         elif different.total_seconds() > 300:  # при регулярных запросах раз в 5 минут обновляются данные
             asyncio.create_task(refresh_data(city))
-    return weather
-
-
-with app.app_context():
-    fetch_weather('Minsk')
+    return weather.temperature

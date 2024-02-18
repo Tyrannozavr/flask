@@ -95,14 +95,29 @@ class User(db.Model):
 # добавления, обновления и удаления пользователей и обновления их балансов
 
 from utils import fetch_weather
+
+users = {}
 @app.route('/update')
 def update():
     userId = request.args.get('userId')
     city = request.args.get('city')
-    print(userId, city)
-    coroutine = fetch_weather(city)
-    weather = asyncio.run(coroutine)
-    return jsonify(a='aaa')
+    # coroutine = fetch_weather(city)
+    # temperature = asyncio.run(coroutine)
+    temperature = -2
+    user = User.query.get(int(userId))
+    local_user = users.get(userId)
+    if local_user:
+        users[userId]['balance'] += temperature
+        users[userId]['count'] += 1
+    else:
+        users[userId] = {'balance': user.balance, 'time': datetime.datetime.now(), 'count': 1}
+
+    # user.balance += temperature
+    # db.session.commit()
+    print(users)
+    return jsonify(balance=users[userId]['balance'])
+
+    # return jsonify(balance=user.balance)
 
 
 with app.app_context():
